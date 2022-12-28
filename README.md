@@ -2,7 +2,7 @@
 Getting NFS up and running inside of Nomad was a bit of a challenge.
 
 There just isn't a lot of documentation about mounting an NFS volume in Nomad,
-and what I did find was already out of data because Nomad seems to be evolving
+and what I did find was already out of date because Nomad seems to be evolving
 at a rapid pace.
 
 The quick overview of what's needed:
