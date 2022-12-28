@@ -39,6 +39,7 @@ plugin needs to be present on each client in your Nomad cluster, thus the
 
 Knowing all that, getting the controller and node plugins deployed should be
 pretty straightforward:
+
 ---
 `$ export NOMAD_ADDR=http://172.16.0.10:4646`
 
