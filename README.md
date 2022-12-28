@@ -34,8 +34,8 @@ set the location of the "endpoint" to be a unix socket. Additionally these
 are lightweight, only getting spurts of activity when specification initially
 spins up, so the cpu and memory resources are **very** low. Finally, while the
 controller plugin can be "centrally" located on one Nomad client, the node
-plugin needs to be present on each client in your Nomad cluster, thus the
-`type = "system"` designation.
+plugin needs to be present on each client in your Nomad cluster _might_ use
+the volume, thus the `type = "system"` designation.
 
 Knowing all that, getting the controller and node plugins deployed should be
 pretty straightforward:
