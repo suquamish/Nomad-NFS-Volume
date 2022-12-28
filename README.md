@@ -39,8 +39,8 @@ plugin needs to be present on each client in your Nomad cluster, thus the
 
 Knowing all that, getting the controller and node plugins deployed should be
 pretty straightforward:
-
-$ export NOMAD_ADDR=http://172.16.0.10:4545
+---
+$ export NOMAD_ADDR=http://172.16.0.10:4646
 
 $ nomad job run nfs-controller.nomad
 
@@ -62,6 +62,28 @@ $ nomad job run nfs-node.nomad
     
     Task Group  Desired  Placed  Healthy  Unhealthy  Progress Deadline
     
-    plugin      1        1       1        0          2022-12-27T20:42:12-06:00
+    plugin      1        1       1        0          2022-12-27T20:47:12-06:00
     
 $
+
+## The creating the volume
+
+This where things diverge from the comforts of Nomad syntax, and we dive into
+Hashicorp HCL syntax. Nothing of note here, other than replace
+`storage.monkeycloud.net` with the FQDNS or IP address of your nfs server.
+Likewise, change `/nas/applications/mariadb` to the actual NFS share you want
+to use. Beyond that, most documentation wants you to `create` the volume, in my
+example, you'll want to `register` the volume, and then allocate it in a job
+specification.
+
+$ nomad register mariadb.volume
+
+## Using your nfs share in a job specification
+
+Now you've got your plugins setup, the volume registered, time to use it in
+a job specification. In my case, if you haven't caught on, I wanted a MariaDB
+server running that saved all it's relevant data onto my nfs share. The
+[linuxserver.io image](https://hub.docker.com/r/linuxserver/mariadb/#!) is perfect because they've configured MariaDB to house
+the stateful date into the `/config` directory, which makes a for a great
+mount pont for our nfs volume.
+
