@@ -104,7 +104,9 @@ the volume you just allocated.
 If you get a command line on your docker container and execute the `mount`
 command, you should see something like:
 ` <... snippage ...>`
+
 `storage.monkeycloud.net:/nas/applications/mariadb on /config type nfs4 (rw,noatime,vers=4.0,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=172.17.0.2,local_lock=none,addr=172.16.0.100)`
+
 ` <... snippage ...>`
 
 
