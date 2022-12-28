@@ -40,9 +40,9 @@ plugin needs to be present on each client in your Nomad cluster, thus the
 Knowing all that, getting the controller and node plugins deployed should be
 pretty straightforward:
 ---
-$ export NOMAD_ADDR=http://172.16.0.10:4646
+`$ export NOMAD_ADDR=http://172.16.0.10:4646`
 
-$ nomad job run nfs-controller.nomad
+`$ nomad job run nfs-controller.nomad`
 
  <... snippage ...>
  
@@ -54,7 +54,7 @@ $ nomad job run nfs-controller.nomad
     
 $
 
-$ nomad job run nfs-node.nomad
+`$ nomad job run nfs-node.nomad`
 
  <... snippage ...>
  
@@ -76,7 +76,7 @@ to use. Beyond that, most documentation wants you to `create` the volume, in my
 example, you'll want to `register` the volume, and then allocate it in a job
 specification.
 
-$ nomad register mariadb.volume
+`$ nomad register mariadb.volume`
 
 ## Using your nfs share in a job specification
 
