@@ -76,7 +76,14 @@ to use. Beyond that, most documentation wants you to `create` the volume, in my
 example, you'll want to `register` the volume, and then allocate it in a job
 specification.
 
+Take notice of the `mount_options`. This is your `/etc/fstab` entry. Particularly
+the `mount_flags` options. You'll notice I've used **nolock**. That's because I
+don't run `statd` and this option will keep locks "local" to the container, which
+works fine for my needs. 
+
 `$ nomad register mariadb.volume`
+
+And you're done allocationg the volume to future usage.
 
 ## Using your nfs share in a job specification
 
@@ -85,5 +92,19 @@ a job specification. In my case, if you haven't caught on, I wanted a MariaDB
 server running that saved all it's relevant data onto my nfs share. The
 [linuxserver.io image](https://hub.docker.com/r/linuxserver/mariadb/#!) is perfect because they've configured MariaDB to house
 the stateful date into the `/config` directory, which makes a for a great
-mount pont for our nfs volume.
+mount point for our nfs volume. (maybe consider [donating to them](https://opencollective.com/linuxserver/donate?amount=20) to support their work).
+
+Things to point out in the `mariadb.nomad` specification:
+- the `volume` stanza under the `group` stanza.  This is where you allocate a
+usage of your volume that you registered. The `source` is the id of the volume
+you registerd in the previous section.
+- the `volume_mount` section under the `task` stanza is where you actually use
+the volume you just allocated.
+
+If you get a command line on your docker container and execute the `mount`
+command, you should see something like:
+` <... snippage ...>`
+`storage.monkeycloud.net:/nas/applications/mariadb on /config type nfs4 (rw,noatime,vers=4.0,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=172.17.0.2,local_lock=none,addr=172.16.0.100)`
+` <... snippage ...>`
+
 
