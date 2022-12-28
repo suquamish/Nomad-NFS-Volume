@@ -25,3 +25,31 @@ One of the interesting things is that HashiCorp Nomad uses kubernetes CSI
 plugins. In the example I've done, I've used a CSI plug in that that has both
 controller and node plugins. It's [GitHub repository is here](https://github.com/kubernetes-csi/csi-driver-nfs).
 
+Setting the controller and node plugins up is pretty straight forward.  These
+end up working like most other `Docker` driver job specifications. Per the
+Nomad documentation "... Nomad exposes a Unix domain socket named csi.sock
+inside each CSI plugin task, and communicates over the gRPC protocol expected
+by the CSI specification," and you'll notice both controller and nod plugins
+set the location of the "endpoint" to be a unix socket. Additionally these
+are lightweight, only getting spurts of activity when specification initially
+spins up, so the cpu and memory resources are **very** low. Finally, while the
+controller plugin can be "centrally" located on one Nomad client, the node
+plugin needs to be present on each client in your Nomad cluster, thus the
+`type = "system"` designation.
+
+Knowing all that, getting the controller and node plugins deployed should be
+pretty straightforward:
+
+`$ export NOMAD_ADDR=http://172.16.0.10:4545
+$ nomad job run nfs-controller.nomad
+ <... snippage ...>
+    Deployed
+    Task Group  Desired  Placed  Healthy  Unhealthy  Progress Deadline
+    plugin      1        1       1        0          2022-12-27T20:42:26-06:00
+$
+$ nomad job run nfs-node.nomad
+ <... snippage ...>
+    Deployed
+    Task Group  Desired  Placed  Healthy  Unhealthy  Progress Deadline
+    plugin      1        1       1        0          2022-12-27T20:42:12-06:00
+$`
