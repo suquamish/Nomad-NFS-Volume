@@ -40,7 +40,7 @@ plugin needs to be present on each client in your Nomad cluster, thus the
 Knowing all that, getting the controller and node plugins deployed should be
 pretty straightforward:
 
-`$ export NOMAD_ADDR=http://172.16.0.10:4545
+$ export NOMAD_ADDR=http://172.16.0.10:4545
 
 $ nomad job run nfs-controller.nomad
 
@@ -64,4 +64,4 @@ $ nomad job run nfs-node.nomad
     
     plugin      1        1       1        0          2022-12-27T20:42:12-06:00
     
-$`
+$
