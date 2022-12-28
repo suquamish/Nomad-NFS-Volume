@@ -102,8 +102,11 @@ you registerd in the previous section.
 - the `volume_mount` section under the `task` stanza is where you actually use
 the volume you just allocated.
 
-If you get a command line on your docker container and execute the `mount`
-command, you should see something like:
+`$ nomad job run mariadb.nomad`
+
+That command should get you a functioning MariaDB server that uses your NFS share.
+You can validate it by getting a command line on your client docker container and
+execute the `mount` command. You should see something like:
 
 ` <... snippage ...>`
 
