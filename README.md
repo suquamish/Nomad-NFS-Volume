@@ -13,13 +13,13 @@ The quick overview of what's needed:
 1. a job specification that uses the volume
 
 ## The controller and node plugins. 
-Hashicorp has a great explanation of the different kinds of storage plugins
+Hashicorp has a great explanation of the different kinds of storage plugin models[^1]
 [right here](https://developer.hashicorp.com/nomad/docs/concepts/plugins/csi), where they state:
 
-There are three types of CSI plugins. Controller Plugins communicate with the
+>There are three types of CSI plugins. Controller Plugins communicate with the
 storage provider's APIs. [...] Node Plugins do the work on each client node,
 like creating mount points. Monolith Plugins are plugins that perform both the
-controller and node roles in the same instance.[^1]
+controller and node roles in the same instance.
 
 In the example I've done, I've used a CSI plug in that provides separate
 controller and node plugins. It's [GitHub repository is here](https://github.com/kubernetes-csi/csi-driver-nfs).
@@ -128,10 +128,10 @@ execute the `mount` command. You should see something like:
 
 ---
 
-[^1] One of the interesting things is that HashiCorp Nomad uses the Container
+[^1]: One of the interesting things is that HashiCorp Nomad uses the Container
 Storage Interface (CSI) specification for storage plugins,
 [so there's a rich library of storage plugins available](https://kubernetes-csi.github.io/docs/drivers.html)
 since Kubernetes (and Apache Mesos) also the CSI specification.
 
-[^2] If you end up using their stuff, maybe consider [donating to them](https://opencollective.com/linuxserver/donate?amount=20) to support their work.
+[^2]: If you end up using their stuff, maybe consider [donating to them](https://opencollective.com/linuxserver/donate?amount=20) to support their work.
 
