@@ -49,27 +49,19 @@ server is:
 Then it's just a matter of running the jobspecs for the controller and node CSI
 plugins:
 
-`$ nomad job run nfs-controller.nomad`
-
+```
+$ nomad job run nfs-controller.nomad
  <... snippage ...>
- 
     Deployed
-    
     Task Group  Desired  Placed  Healthy  Unhealthy  Progress Deadline
-    
     plugin      1        1       1        0          2022-12-27T20:42:26-06:00
-    
 
-`$ nomad job run nfs-node.nomad`
-
+$ nomad job run nfs-node.nomad
  <... snippage ...>
- 
     Deployed
-    
     Task Group  Desired  Placed  Healthy  Unhealthy  Progress Deadline
-    
     plugin      1        1       1        0          2022-12-27T20:47:12-06:00
-    
+```
 
 ## The creating the volume
 
