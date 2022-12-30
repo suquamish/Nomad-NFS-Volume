@@ -6,48 +6,101 @@ and what I did find was already out of date because Nomad seems to be evolving
 at a rapid pace.
 
 The quick overview of what's needed:
-1. an already functioning NFS server
-1. a CSI NFS contoller plugin
-1. a CSI NFS node plugin
+1. a functioning NFS server
+1. an existing Nomad cluster
+1. a CSI NFS plugin
 1. a volume definition
 1. a job specification that uses the volume
 
-## The controller and node plugins. 
-Hashicorp has a great explanation of the different kinds of storage plugin models[^1]
-[right here](https://developer.hashicorp.com/nomad/docs/concepts/plugins/csi), where they state:
+
+## Assumptions
+First, I assume that you're using some linux distribution, but for me, all my
+**clients** and **servers** are Debian Bullseye (at the time of writing) with
+Nomad installed using the official HashiCorp repository.
+
+Second, the way I describe some of the configuration changes need to get this
+example running is impacted because of the distro I chose, and the Nomad
+installation method I used. If you're here to learn how to get NFS to work with
+Nomad on *your* cluster, my assumption is that you can handle any translation
+between configuration styles of my installation and yours.
+
+Third, I assume your not just copy-n'-pasting these config files, and you
+understand that things like server names, datacenter names, and NFS export
+locations need to be changed to match your specific environment.
+
+My fourth assumption is that you have a pretty good understanding how navigate
+Linux and Docker. You understand things like filesystem mount options, and how
+to get to the command line of a Docker container.
+
+## The controller and node plugins.
+The CSI plugins are the foundation of your cluster being able to use NFS
+resources. Take a look at the `nfs-controller.nomad` and `nfs-node.nomad`
+job specifications for this section.
+
+Hashicorp has a great explanation of the different kinds of storage plugin
+models[^1] [right here](https://developer.hashicorp.com/nomad/docs/concepts/plugins/csi),
+where they state:
 
 >There are three types of CSI plugins. Controller Plugins communicate with the
 storage provider's APIs. [...] Node Plugins do the work on each client node,
 like creating mount points. Monolith Plugins are plugins that perform both the
 controller and node roles in the same instance.
 
-In the example I've done, I've used a CSI plug in that provides separate
-controller and node plugins. It's [GitHub repository is here](https://github.com/kubernetes-csi/csi-driver-nfs).
+In my example the CSI plug-in[^3] provides **controller** and **node** roles
+separately, although there's one binary used for both roles. The role the
+job takes on is setup in the `csi_plugin` stanza using the `type` parameter.
+You need to use the same value for the `id` parameter in the `csi_plugin`
+stanza for both so that Nomad knows they belong to the same plugin.
 
+Setting the **controller** and **node** plugins up is pretty straight forward
+for the job specification, with one noteworthy exeception; the **node** plugin
+uses a `privileged = true` parameter in the `config` block. This parameter
+gives the container access to the hosts devices, which means that Nomad and
+Docker need to be configured to allow privileged containers. For me, this
+required the following Nomad configuration change for all my **agents**, along
+with a restart of Nomad:
 
-Setting the controller and node plugins up is pretty straight forward. These
-end up working like most other `Docker` driver job specifications. Per the
-Nomad documentation "... Nomad exposes a Unix domain socket named *csi.sock*
-inside each CSI plugin task, and communicates over the gRPC protocol expected
-by the CSI specification," and you'll notice both controller and nod plugins
-set the location of the "endpoint" to be a unix socket. Additionally these
-are lightweight, only getting spurts of activity when a job specification
-initially spins up, so the cpu and memory resources are **very** low. Finally,
-while the controller plugin can be "centrally" located on one Nomad client,
-the node plugin needs to be present on each client in your Nomad cluster
-_might_ use the volume, thus the `type = "system"` designation gets it
-automagically deployed to every node in your cluster.
+```
+$ cat /etc/nomad.d/docker.hcl
+plugin "docker" {
+  config {
+    allow_privileged = true
+  }
+}
+```
 
-Knowing all that, getting the controller and node plugins runing should easy.
-Since I run nomad commands *to* my cluster *from* my workstation that isn't a
-member of the cluster, I start off by telling the nomad binary where my nomad
-server is:
+Per the Nomad documentation
+
+>... Nomad exposes a Unix domain socket named *csi.sock* inside each CSI plugin
+task, and communicates over the gRPC protocol expected by the CSI specification,
+
+You'll notice both **controller** and **node** plugins set the location of the
+"endpoint" to be a unix socket within' the `config` block's `args` parameter.
+This places the unix socket the plugin listens/writes to at the same location
+where Nomad will communicate over the exposed socket; that is the `mount_dir`
+specified in the `csi_plugin` stanza. The `mount_dir` location will map to
+local storage on your **agent**, specifically within the `data_dir` location of
+your Nomad **agent** configuration.
+
+These are lightweight jobs, only getting spurts of activity when a job
+specification initially spins up, so the `cpu` and `memory` parameters can be
+set low.
+
+Finally, while the **controller** plugin can be "centrally" located on one Nomad
+**agent**, the **node** plugin needs to be present on each **client** in your
+Nomad cluster that *might* use the volume. Thus the `type = "system"` designation
+gets it automagically deployed to every **client** in your cluster.
+
+### Deploying
+Since I run `nomad` commands *to* my cluster *from* my workstation that isn't
+(strictly) an **agent** in the cluster, I start off by telling the `nomad`
+binary where my Nomad **server** is:
 
 `$ export NOMAD_ADDR=http://172.16.0.10:4646`
 
 
-Then it's just a matter of running the jobspecs for the controller and node CSI
-plugins:
+Then it's just a matter of running the jobspecs for the **controller** and
+**node** CSI plugins:
 
 ```
 $ nomad job run nfs-controller.nomad
@@ -63,60 +116,61 @@ $ nomad job run nfs-node.nomad
     plugin      1        1       1        0          2022-12-27T20:47:12-06:00
 ```
 
-## The creating the volume
+## Creating the Volume
 
 This where things diverge from the comforts of Nomad jobspec syntax, and we
-dive into run-of-the-mill Hashicorp HCL syntax to define the volume.
+dive into run-of-the-mill Hashicorp HCL syntax to define the volume. For this
+section you'll be using the `mariadb.volume` file.
 
-Replace `storage.monkeycloud.net` in the **mariadb.volume** file with the FQDNS or
-IP address of your NFS server. Likewise, change `/nas/applications/mariadb` to the
-actual NFS share you want to use. The `mount_options` is essentially the
-equivalent `/etc/fstab` entry.
+HashiCorp's [documentation on the Volume specification](https://developer.hashicorp.com/nomad/docs/other-specifications/volume)
+is invaluable, but I'll go through some quick explanation of the settings.
 
-`mount_flags = ["nolock,nfsvers=4,rw,noatime"]`:
+The `plugin_id` tells your volume which plugin to register itself with.
 
-- I've used `nolock` because I don't run statd. This option will keep locks
-"local" to the container, which works fine for my needs. You can omit this if
-you have statd running.
-- `nfsvers=4` is one of the many ways to you specify that you want to use the
-NFSv4 protocol. You leave it out if your NFS server only speaks NFSv4.
-- `rw` instructs users of this volume to mount it read and write capable.
-- `noatime` means we don't waste time communicating access time changes over
-the network.
+The `context` block is going to to tell your CSI plugins where the NFS
+resource is. The `server` parameter is the FQDNS or IP address of your NFS
+server. Likewise the `share` parameter is the specific export that you want
+this volume to use.
 
-Beyond that, most documentation wants you to `create` the volume. In my
-example, the volumne already exists on an *external* nfs server, so I don't
-`create` the volume, I just `register` the volume, and then allocate it in a
-job specification.
+The `mount_options` block is essentially the equivalent of `/etc/fstab` where
+your not only specify the `fs_type` but the mount options via the `mount_flags`
+parameter.
 
+You can specify more than one `capability` block to fill all the capabilities
+your volume needs to provide In my example, the volume must satify both the
+`single-node-writer` and `single-node-reader-only` roles.
+
+### Deploying
 `$ nomad volume register mariadb.volume`
 
 And you're done allocationg the volume to future usage.
 
-## Using your nfs share in a job specification
+## Using your NFS Volume in a job specification
 
 Now you've got your plugins setup, the volume registered, time to use it in
 a job specification. In my case, if you haven't caught on, I wanted a MariaDB
-server running that saved all it's relevant data onto my nfs share. The
-[linuxserver.io image](https://hub.docker.com/r/linuxserver/mariadb/#!) is perfect because they've configured MariaDB to house
-the stateful date into the `/config` directory, which makes a for a great
-mount point for our nfs volume[^2].
+server running that saved all it's relevant data onto my NFS export. The
+`mariadb.nomad` file is relevant to this section.
 
-Things to point out in the **mariadb.nomad** job specification:
+The [linuxserver.io image](https://hub.docker.com/r/linuxserver/mariadb/#!) is
+perfect because they've configured MariaDB to house the stateful data into the
+`/config` directory. This makes it a great mount point for our NFS volume[^2].
 
-- the `volume` stanza under the `group` stanza. This is where you allocate a
-usage of the volume that you registered. The `source` is the `id` of the volume
-you registerd in the **mariadb.volume** specification.
-- the `volume_mount` section (under the `task` stanza) is where you actually use
-the allocated volume in one of your jobs.
-- For the love of anything, change the `MYSQL_ROOT_PASSWORD = "password123456789"`
-to something secure. This is the ~~mysql~~MariaDB super user password.
+Points of interest in the job specification:
 
+- the `volume` stanza under the `group` stanza is where you allocate a usage of
+the volume that you registered. `source` is the `id` of the volume you
+registered in the Volume specification.
+- the `volume_mount` stanza (under the `task` stanza) is where you actually use
+the allocated volume in one of your jobs. The `volume` parameter is the name of
+the `volume` stanza.
+
+### Deploying
 `$ nomad job run mariadb.nomad`
 
 That command should get you a functioning MariaDB server that uses your NFS share.
-You can validate it by getting a command line on your client docker container and
-execute the `mount` command. You should see something like:
+You can validate it by getting a command line on your client Docker container and
+executing the `mount` command; you should see something like:
 
 ```
 <... snippage ...>
@@ -131,7 +185,8 @@ execute the `mount` command. You should see something like:
 [^1]: One of the interesting things is that HashiCorp Nomad uses the Container
 Storage Interface (CSI) specification for storage plugins,
 [so there's a rich library of storage plugins available](https://kubernetes-csi.github.io/docs/drivers.html)
-since Kubernetes (and Apache Mesos) also the CSI specification.
+since Kubernetes (and Apache Mesos) also use the CSI specification.
 
 [^2]: If you end up using their stuff, maybe consider [donating to them](https://opencollective.com/linuxserver/donate?amount=20) to support their work.
 
+[^3]: The CSI plugin's GitHub repository [is here](https://github.com/kubernetes-csi/csi-driver-nfs).
