@@ -24,7 +24,7 @@ installation method I used. If you're here to learn how to get NFS to work with
 Nomad on *your* cluster, my assumption is that you can handle any translation
 between configuration styles of my installation and yours.
 
-Third, I assume your not just copy-n'-pasting these config files, and you
+Third, I assume you're not just copy-n'-pasting these config files, and you
 understand that things like server names, datacenter names, and NFS export
 locations need to be changed to match your specific environment.
 
@@ -133,17 +133,20 @@ server. Likewise the `share` parameter is the specific export that you want
 this volume to use.
 
 The `mount_options` block is essentially the equivalent of `/etc/fstab` where
-your not only specify the `fs_type` but the mount options via the `mount_flags`
+you not only specify the `fs_type` but the mount options via the `mount_flags`
 parameter.
 
 You can specify more than one `capability` block to fill all the capabilities
-your volume needs to provide In my example, the volume must satify both the
+your volume needs to provide. In my example, the volume must satify both the
 `single-node-writer` and `single-node-reader-only` roles.
 
 ### Deploying
 `$ nomad volume register mariadb.volume`
 
-And you're done allocationg the volume to future usage.
+And you're done allocationg the volume to future usage. `volume register` just
+sets up the volume to be used. Since the NFS volume already exists, it doesn't
+need to be created, and allocating the volume in a jobspec will put it into
+use.
 
 ## Using your NFS Volume in a job specification
 
@@ -159,11 +162,11 @@ perfect because they've configured MariaDB to house the stateful data into the
 Points of interest in the job specification:
 
 - the `volume` stanza under the `group` stanza is where you allocate a usage of
-the volume that you registered. `source` is the `id` of the volume you
-registered in the Volume specification.
+the Volume that you registered. The `source` parameter is the value of the `id`
+parameter from `mariadb.volume`.
 - the `volume_mount` stanza (under the `task` stanza) is where you actually use
-the allocated volume in one of your jobs. The `volume` parameter is the name of
-the `volume` stanza.
+the allocated Volume by mounting it in the container. The `volume` parameter is
+the name of the `volume` stanza (☝️).
 
 ### Deploying
 `$ nomad job run mariadb.nomad`
