@@ -12,7 +12,6 @@ The quick overview of what's needed:
 1. a volume definition
 1. a job specification that uses the volume
 
-
 ## Assumptions
 First, I assume that you're using some linux distribution, but for me, all my
 **clients** and **servers** are Debian Bullseye (at the time of writing) with
@@ -120,7 +119,7 @@ $ nomad job run nfs-node.nomad
 
 This where things diverge from the comforts of Nomad jobspec syntax, and we
 dive into run-of-the-mill Hashicorp HCL syntax to define the volume. For this
-section you'll be using the `mariadb.volume` file.
+section you'll be using the `mariadb.volume` and `pictures.volume` files.
 
 HashiCorp's [documentation on the Volume specification](https://developer.hashicorp.com/nomad/docs/other-specifications/volume)
 is invaluable, but I'll go through some quick explanation of the settings.
@@ -148,7 +147,41 @@ sets up the volume to be used. Since the NFS volume already exists, it doesn't
 need to be created, and allocating the volume in a jobspec will put it into
 use.
 
-## Using your NFS Volume in a job specification
+#### Special volume behavior
+
+There's some inconsistent behavior with CSI plugin, namely that when the
+volume gets mounted inside the container the **node** plugin wants to perform a
+chmod **after** the volume is mounted if the permissions don't match. Normally
+this isn't a problem, but if you want to mount an NFS volume that is exported
+as read-only, but the mount point has permissions that allow writing, issuing
+the chmod **after** the mount will cause an error when you try to allocate that
+volume when running your job specification ... a vexing problem to
+troubleshoot. Your job specification that tries to allocate the volume will
+quickly fail[^4], and you'll see an error similar to:
+
+```
+failed to setup alloc: pre-run hook "csi_hook" failed:
+node plugin returned an internal error, check the plugin allocation logs for more information:
+rpc error: code = Internal desc = chmod /csi/per-alloc/a79a761e-d35e-4d42-9adf-40e15efd592a/test/ro-file-system-multi-node-reader-only:
+operation not permitted
+```
+
+The answer is in the [driver documentation](https://github.com/kubernetes-csi/csi-driver-nfs/blob/master/docs/driver-parameters.md):
+
+```
+                   mounted folder permissions.
+                   The default is 0, if set as
+mountPermissions   non-zero, driver will perform
+                   chmod after mount
+```
+
+And this is where the `pictures.volume` example comes into play. Although the
+documentation specifies the default is zero, it appears to not be the case, or
+at least not when used with HashiCorp Nomad. By specifically setting
+`mountPermissions = 0` in the `context` block, you bypass the `chmod` behavior,
+and everything mounts cleanly.
+
+## Using your NFS volume in a job specification
 
 Now you've got your plugins setup, the volume registered, time to use it in
 a job specification. In my case, if you haven't caught on, I wanted a MariaDB
@@ -193,3 +226,7 @@ since Kubernetes (and Apache Mesos) also use the CSI specification.
 [^2]: If you end up using their stuff, maybe consider [donating to them](https://opencollective.com/linuxserver/donate?amount=20) to support their work.
 
 [^3]: The CSI plugin's GitHub repository [is here](https://github.com/kubernetes-csi/csi-driver-nfs).
+
+[^4]: It's important to note the volume will register without error. You'll
+only see the problem when trying to allocate the volume while running a job
+specification.

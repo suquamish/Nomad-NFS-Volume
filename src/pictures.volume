@@ -1,0 +1,25 @@
+type = "csi"
+id = "pictures-nfs"
+name = "pictures-nfs"
+plugin_id = "nfs"
+
+context {
+    server = "storage.monkeycloud.net"
+    share = "/nas/pictures"
+    mountPermissions = 0
+}
+
+capability {
+    access_mode = "multi-node-reader-only"
+    attachment_mode = "file-system"
+}
+
+capability {
+    access_mode = "single-node-reader-only"
+    attachment_mode = "file-system"
+}
+
+mount_options {
+    fs_type = "nfs"
+    mount_flags = ["nolock,nfsvers=4,ro"]
+}
