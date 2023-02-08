@@ -6,16 +6,17 @@ and what I did find was already out of date because Nomad seems to be evolving
 at a rapid pace.
 
 The quick overview of what's needed:
-1. a functioning NFS server
-1. an existing Nomad cluster
-1. a CSI NFS plugin
-1. a volume definition
-1. a job specification that uses the volume
+1. a functioning NFS server (plenty of guides on the internet explain how to do this)
+1. an existing Nomad cluster (no explaination how to get one running is provided)
+1. a CSI NFS plugin (examples show how to obtain and configure this)
+1. a volume definition (examples in this repo explain how to create this)
+1. a job specification that uses the volume (examples here show how to configure)
 
 ## Assumptions
 First, I assume that you're using some linux distribution, but for me, all my
 **clients** and **servers** are Debian Bullseye (at the time of writing) with
-Nomad installed using the official HashiCorp repository.
+Nomad installed using the official HashiCorp repository. At the time of writing
+this example uses Nomad version 1.4.3
 
 Second, the way I describe some of the configuration changes need to get this
 example running is impacted because of the distro I chose, and the Nomad
